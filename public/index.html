@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JK Carburantes — Sistema de Gestión de Ventas</title>
+  <meta name="description" content="Sistema de control de ventas de carburantes con algoritmo de cupo dinámico para JK Carburantes.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="logo">
+      <span class="logo-icon">⛽</span>
+      <h1>JK Carburantes</h1>
+    </div>
+    <ul class="nav-links">
+      <li><button class="nav-btn active" data-target="dashboard" id="nav-dashboard">📊 Dashboard</button></li>
+      <li><button class="nav-btn" data-target="nueva-venta" id="nav-nueva-venta">💳 Nueva Venta</button></li>
+      <li><button class="nav-btn" data-target="ingresos" id="nav-ingresos">🛢️ Ingresos</button></li>
+      <li><button class="nav-btn" data-target="clientes" id="nav-clientes">👥 Clientes</button></li>
+      <li><button class="nav-btn" data-target="config" id="nav-config">⚙️ Configuración</button></li>
+    </ul>
+  </nav>
+
+  <main class="container">
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- DASHBOARD                                    -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section id="dashboard" class="view active-view">
+      <div class="section-header">
+        <h2 class="section-title">Resumen <span>del Sistema</span></h2>
+        <button class="btn btn-ghost btn-sm" id="btn-refresh-dash">🔄 Actualizar</button>
+      </div>
+
+      <!-- STAT CARDS -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card blue">
+          <div class="stat-label">Ventas Hoy</div>
+          <div class="stat-value" id="stat-ventas-hoy">—</div>
+          <div class="stat-sub" id="stat-litros-hoy">— litros</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Total Litros Vendidos</div>
+          <div class="stat-value" id="stat-litros-total">—</div>
+          <div class="stat-sub" id="stat-ventas-total">— ventas registradas</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">Clientes Registrados</div>
+          <div class="stat-value" id="stat-clientes">—</div>
+          <div class="stat-sub" id="stat-suspendidos">— suspendidos</div>
+        </div>
+      </div>
+
+      <!-- TANKS SECTION -->
+      <div class="section-header mt-3">
+        <h3 class="font-bold" style="font-size:1.05rem">🛢️ Estado de Tanques</h3>
+      </div>
+      <div class="tanks-grid mb-3" id="tanques-container"></div>
+
+      <!-- LATEST SALES -->
+      <div class="section-header">
+        <h3 class="font-bold" style="font-size:1.05rem">📋 Últimas Ventas</h3>
+        <span class="text-muted text-small">Últimas 15 transacciones</span>
+      </div>
+      <div class="table-wrap">
+        <table id="table-ventas">
+          <thead>
+            <tr>
+              <th>Fecha y Hora</th>
+              <th>Cliente / Documento</th>
+              <th>Placa</th>
+              <th>Carburante</th>
+              <th>Litros</th>
+              <th>Cupo Usado</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-ventas">
+            <tr><td colspan="7" class="text-center text-muted" style="padding:2rem">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- NUEVA VENTA                                  -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section id="nueva-venta" class="view">
+      <div class="section-header">
+        <h2 class="section-title">Nueva <span>Venta Controlada</span></h2>
+      </div>
+
+      <div class="venta-layout">
+        <!-- Panel Izquierdo: Cliente -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3>🔍 Identificación de Cliente</h3>
+          </div>
+
+          <div class="search-row">
+            <input type="text" id="buscar-documento" placeholder="Cédula, documento o placa..." autocomplete="off">
+            <button class="btn btn-primary" id="btn-buscar">Buscar</button>
+          </div>
+
+          <!-- Resultado cliente -->
+          <div id="cliente-info" class="client-info-card hide mt-2">
+            <div class="info-row">
+              <span class="label">Estado</span>
+              <span class="value" id="info-estado"></span>
+            </div>
+            <div class="info-row">
+              <span class="label">Nombre</span>
+              <span class="value" id="info-nombre"></span>
+            </div>
+            <div class="info-row">
+              <span class="label">Documento</span>
+              <span class="value" id="info-documento"></span>
+            </div>
+            <div class="info-row">
+              <span class="label">Placa</span>
+              <span class="value" id="info-placa"></span>
+            </div>
+            <div class="info-row">
+              <span class="label">Tipo</span>
+              <span class="value" id="info-tipo"></span>
+            </div>
+            <div class="info-row">
+              <span class="label">Promedio semanal</span>
+              <span class="value highlight-blue" id="info-promedio">0 L</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Límite autorizado</span>
+              <span class="value highlight-green" id="info-limite">0 L</span>
+            </div>
+
+            <!-- Cuota visual -->
+            <div class="quota-meter mt-2" id="quota-meter">
+              <div class="quota-label">Solicitud vs Cupo</div>
+              <div class="quota-track">
+                <div class="quota-fill" id="quota-fill" style="width:0%"></div>
+              </div>
+              <div class="flex-between text-small text-muted mt-1">
+                <span>0 L solicitados</span>
+                <span id="quota-tip">Máx: 0 L</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- CLIENTE NUEVO: Formulario de registro rápido -->
+          <div id="registro-nuevo-cliente" class="hide mt-2">
+            <div class="alert alert-warning">
+              ⚠️ Cliente no encontrado. Completa los datos para registrarlo.
+            </div>
+            <div class="form-group">
+              <label>Nombre Completo</label>
+              <input type="text" id="nuevo-nombre" placeholder="Nombre completo">
+            </div>
+            <div class="form-group">
+              <label>Placa del Vehículo</label>
+              <input type="text" id="nuevo-placa" placeholder="ABC-1234">
+            </div>
+            <div class="form-group">
+              <label>Tipo de Cliente</label>
+              <select id="nuevo-tipo">
+                <option value="Particular">Particular</option>
+                <option value="Transporte_Publico">Transporte Público</option>
+                <option value="Empresa">Empresa</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-full" id="btn-registrar-rapido">✅ Registrar y Continuar</button>
+          </div>
+        </div>
+
+        <!-- Panel Derecho: Despacho -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3>🚀 Datos del Despacho</h3>
+          </div>
+
+          <form id="form-venta" onsubmit="event.preventDefault()">
+            <div class="form-group">
+              <label>Tanque / Carburante</label>
+              <select id="select-tanque" required>
+                <option value="">— Seleccionar tanque —</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Cantidad Solicitada (Litros)</label>
+              <input type="number" id="input-cantidad" min="0.1" step="0.01" placeholder="Ingrese litros" disabled>
+            </div>
+
+            <div id="alerta-cupo" class="alert alert-warning hide">
+              ⚠️ <strong>EXCEDE el cupo autorizado.</strong><br>
+              Máximo permitido: <strong><span id="alert-max">0</span> L</strong>
+            </div>
+
+            <div id="alerta-stock" class="alert alert-danger hide">
+              ⛽ <strong>Stock insuficiente en el tanque seleccionado.</strong>
+            </div>
+
+            <div class="dispatch-actions">
+              <button type="button" class="btn btn-ghost" id="btn-limpiar">🗑️ Limpiar</button>
+              <button type="submit" id="btn-procesar" class="btn btn-success" disabled>✅ Procesar Venta</button>
+            </div>
+          </form>
+
+          <!-- Summary box before submit -->
+          <div id="resumen-despacho" class="client-info-card hide mt-3" style="border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.04)">
+            <div class="info-row"><span class="label">Carburante</span><span class="value" id="rsm-carb">—</span></div>
+            <div class="info-row"><span class="label">Litros a despachar</span><span class="value highlight-green" id="rsm-litros">—</span></div>
+            <div class="info-row"><span class="label">Cupo disponible</span><span class="value" id="rsm-cupo">—</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- INGRESOS (Cisternas)                         -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section id="ingresos" class="view">
+      <div class="section-header">
+        <h2 class="section-title">Registro de <span>Ingresos</span></h2>
+      </div>
+
+      <div class="two-col">
+        <!-- Formulario -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3>🛢️ Nueva Cisterna / Reabastecimiento</h3>
+          </div>
+          <form id="form-ingreso" onsubmit="event.preventDefault()">
+            <div class="form-group">
+              <label>Tanque Destino</label>
+              <select id="select-tanque-ingreso" required></select>
+            </div>
+            <div class="form-group">
+              <label>Número de Factura del Proveedor</label>
+              <input type="text" id="ingreso-factura" placeholder="FAC-2024-0001" required>
+            </div>
+            <div class="form-group">
+              <label>Cantidad en Litros</label>
+              <input type="number" id="ingreso-cantidad" min="1" step="0.01" placeholder="5000" required>
+            </div>
+            <div class="form-group">
+              <label>Observaciones (opcional)</label>
+              <textarea id="ingreso-observaciones" placeholder="Notas adicionales..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">📥 Registrar Ingreso</button>
+          </form>
+        </div>
+
+        <!-- Historial ingresos -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3>📋 Historial de Ingresos</h3>
+          </div>
+          <div class="table-wrap" style="max-height:400px; overflow-y:auto;">
+            <table id="table-ingresos">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tanque</th>
+                  <th>Litros</th>
+                  <th>Factura</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-ingresos">
+                <tr><td colspan="4" class="text-center text-muted" style="padding:2rem">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- CLIENTES                                     -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section id="clientes" class="view">
+      <div class="section-header">
+        <h2 class="section-title">Gestión de <span>Clientes</span></h2>
+        <button class="btn btn-primary btn-sm" id="btn-nuevo-cliente">+ Nuevo Cliente</button>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="panel mb-3">
+        <div class="clients-toolbar">
+          <input type="text" id="search-clientes" placeholder="Buscar por nombre, documento o placa..." style="max-width: 360px;">
+          <select id="filter-estado-cliente" style="max-width:160px;">
+            <option value="">Todos los estados</option>
+            <option value="Activo">Activos</option>
+            <option value="Suspendido">Suspendidos</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" id="btn-buscar-clientes">🔍 Buscar</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="table-clientes">
+          <thead>
+            <tr>
+              <th>Documento</th>
+              <th>Nombre</th>
+              <th>Placa</th>
+              <th>Tipo</th>
+              <th>Estado</th>
+              <th>1ª Compra</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-clientes">
+            <tr><td colspan="7" class="text-center text-muted" style="padding:2rem">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- CONFIGURACIÓN                               -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section id="config" class="view">
+      <div class="section-header">
+        <h2 class="section-title">⚙️ <span>Configuración</span></h2>
+      </div>
+
+      <!-- TABS -->
+      <div class="config-tabs">
+        <button class="config-tab active" data-tab="config-empresa">🏢 Empresa</button>
+        <button class="config-tab" data-tab="config-tanques">🛢️ Tanques</button>
+      </div>
+
+      <!-- Empresa -->
+      <div id="config-empresa" class="config-sub-panel active">
+        <div class="panel" style="max-width:700px">
+          <div class="panel-header">
+            <h3>Datos de la Empresa y Algoritmo de Cupos</h3>
+          </div>
+          <form id="form-empresa" onsubmit="event.preventDefault()">
+            <div class="two-col">
+              <div class="form-group">
+                <label>Nombre de la Empresa</label>
+                <input type="text" id="emp-nombre">
+              </div>
+              <div class="form-group">
+                <label>NIT</label>
+                <input type="text" id="emp-nit">
+              </div>
+              <div class="form-group">
+                <label>Dirección</label>
+                <input type="text" id="emp-direccion">
+              </div>
+              <div class="form-group">
+                <label>Ciudad</label>
+                <input type="text" id="emp-ciudad">
+              </div>
+              <div class="form-group">
+                <label>Teléfono</label>
+                <input type="text" id="emp-telefono">
+              </div>
+            </div>
+
+            <hr style="border-color: var(--border); margin: 1.5rem 0;">
+            <p class="text-muted mb-2" style="font-size:0.9rem">⚙️ <strong>Parámetros del Algoritmo de Cupo Dinámico</strong></p>
+
+            <div class="three-col">
+              <div class="form-group">
+                <label>Cupo base - clientes nuevos (L)</label>
+                <input type="number" id="emp-cupo-base" min="1" step="0.01">
+              </div>
+              <div class="form-group">
+                <label>Factor de holgura (%)</label>
+                <input type="number" id="emp-factor" min="0" step="0.01" placeholder="0.10 = 10%">
+              </div>
+              <div class="form-group">
+                <label>Días del período de evaluación</label>
+                <input type="number" id="emp-dias" min="7" step="1">
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">💾 Guardar Configuración</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tanques -->
+      <div id="config-tanques" class="config-sub-panel">
+        <div class="section-header">
+          <h3 class="font-bold">Tanques Registrados</h3>
+          <button class="btn btn-primary btn-sm" id="btn-nuevo-tanque">+ Nuevo Tanque</button>
+        </div>
+        <div class="table-wrap">
+          <table id="table-tanques-config">
+            <thead>
+              <tr>
+                <th>Identificador</th>
+                <th>Carburante</th>
+                <th>Capacidad Máx.</th>
+                <th>Stock Mínimo</th>
+                <th>Stock Actual</th>
+                <th>Nivel</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-tanques-config">
+              <tr><td colspan="7" class="text-center text-muted" style="padding:2rem">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- MODALES                                      -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <!-- Recibo de Venta -->
+  <div id="modal-recibo" class="modal-backdrop hide">
+    <div class="modal-box sm">
+      <div class="receipt" id="receipt-content">
+        <div class="receipt-header">
+          <div style="font-size:2rem; margin-bottom:.5rem">⛽</div>
+          <h2>COMPROBANTE DE VENTA</h2>
+          <p id="receipt-empresa-name">JK Carburantes</p>
+        </div>
+        <hr class="receipt-divider">
+        <div id="receipt-rows"></div>
+        <hr class="receipt-divider">
+        <div class="receipt-row total">
+          <span>TOTAL DESPACHADO</span>
+          <strong id="receipt-total">— L</strong>
+        </div>
+        <div class="receipt-footer">
+          <p>Gracias por su compra controlada</p>
+          <p id="receipt-footer-date"></p>
+        </div>
+      </div>
+      <div class="modal-footer" style="background: #f9fafb">
+        <button class="btn btn-ghost btn-sm" id="btn-imprimir">🖨️ Imprimir</button>
+        <button class="btn btn-primary" id="btn-cerrar-recibo">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nuevo/Editar Cliente -->
+  <div id="modal-cliente" class="modal-backdrop hide">
+    <div class="modal-box md">
+      <div class="modal-header">
+        <h3 id="modal-cliente-title">Nuevo Cliente</h3>
+        <button class="modal-close" id="close-modal-cliente">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="two-col">
+          <div class="form-group">
+            <label>Documento / CI</label>
+            <input type="text" id="mc-documento" placeholder="12345678">
+          </div>
+          <div class="form-group">
+            <label>Placa del Vehículo</label>
+            <input type="text" id="mc-placa" placeholder="ABC-1234">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Nombre Completo</label>
+          <input type="text" id="mc-nombre" placeholder="Nombre y apellido">
+        </div>
+        <div class="two-col">
+          <div class="form-group">
+            <label>Tipo de Cliente</label>
+            <select id="mc-tipo">
+              <option value="Particular">Particular</option>
+              <option value="Transporte_Publico">Transporte Público</option>
+              <option value="Empresa">Empresa</option>
+            </select>
+          </div>
+          <div class="form-group" id="mc-estado-group">
+            <label>Estado</label>
+            <select id="mc-estado">
+              <option value="Activo">Activo</option>
+              <option value="Suspendido">Suspendido</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="cancel-modal-cliente">Cancelar</button>
+        <button class="btn btn-primary" id="save-modal-cliente">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nuevo/Editar Tanque -->
+  <div id="modal-tanque" class="modal-backdrop hide">
+    <div class="modal-box md">
+      <div class="modal-header">
+        <h3 id="modal-tanque-title">Nuevo Tanque</h3>
+        <button class="modal-close" id="close-modal-tanque">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="two-col">
+          <div class="form-group">
+            <label>Identificador</label>
+            <input type="text" id="mt-identificador" placeholder="T-03">
+          </div>
+          <div class="form-group">
+            <label>Tipo de Carburante</label>
+            <select id="mt-tipo">
+              <option value="Gasolina">Gasolina</option>
+              <option value="Diesel">Diesel</option>
+            </select>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="form-group">
+            <label>Capacidad Máxima (L)</label>
+            <input type="number" id="mt-capacidad" min="1" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Stock Mínimo (L)</label>
+            <input type="number" id="mt-stock-min" min="0" step="0.01">
+          </div>
+        </div>
+        <div class="form-group" id="mt-stock-actual-group">
+          <label>Stock Inicial (L)</label>
+          <input type="number" id="mt-stock-actual" min="0" step="0.01" placeholder="Solo para nuevos tanques">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="cancel-modal-tanque">Cancelar</button>
+        <button class="btn btn-primary" id="save-modal-tanque">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Historial Cliente -->
+  <div id="modal-historial" class="modal-backdrop hide">
+    <div class="modal-box lg">
+      <div class="modal-header">
+        <h3>📋 Historial de Compras — <span id="historial-cliente-nombre"></span></h3>
+        <button class="modal-close" id="close-modal-historial">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="table-wrap" style="max-height:400px; overflow-y:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tanque</th>
+                <th>Carburante</th>
+                <th>Litros</th>
+                <th>Límite</th>
+                <th>Limitado?</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-historial"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="close-modal-historial-btn">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
